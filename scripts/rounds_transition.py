@@ -37,7 +37,8 @@ def stop_timer(key: str) -> None:
 
 
 def set_flow(key: str, flow: str, transition: bool = True) -> None:
-    cmd = ["python3", str(SCRIPTS / "jira_set_flow.py"), "--key", key, "--flow", flow]
+    # Use the Linear state API helper instead of label-based Jira edits.
+    cmd = ["python3", str(SCRIPTS / "linear_set_flow.py"), "--key", key, "--flow", flow]
     if transition:
         cmd.append("--transition")
     run(cmd)
