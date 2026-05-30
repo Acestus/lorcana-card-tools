@@ -139,11 +139,28 @@ def scrape(url):
 
 
 def write_tsv(rows, out_path):
+    """
+    Match the requested fabled style sample:
+    - For regular cards (1..204): number, FALSE, FALSE, name, rarity
+    - For special cards (above 204) or when rarity is Epic/Enchanted/Iconic:
+      number, FALSE, <Rarity>, name, <Rarity>
+    """
     with open(out_path, 'w', encoding='utf-8') as f:
         for num, name, rarity in rows:
-            rarity = rarity or ''
-            # TSV: number, FALSE, FALSE, name, rarity
-            line = '\t'.join([num, 'FALSE', 'FALSE', unescape(name), rarity])
+            rarity = (rarity or '').strip()
+            # try interpret numeric value
+            try:
+                n_int = int(num)
+            except Exception:
+                n_int = None
+
+            if (n_int is not None and n_int > 204) or rarity in ('Epic', 'Enchanted', 'Iconic'):
+                # e.g. 205\tFALSE\tEpic\tTiana – Warm and Happy\tEpic
+                line = '\t'.join([num, 'FALSE', rarity, unescape(name), rarity])
+            else:
+                # e.g. 001\tFALSE\tFALSE\tThomas – ...\tCommon
+                line = '\t'.join([num, 'FALSE', 'FALSE', unescape(name), rarity])
+
             f.write(line + '\n')
 
 
