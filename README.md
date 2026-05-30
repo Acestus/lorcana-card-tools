@@ -231,7 +231,7 @@ python3 scripts/tl.py stop <PROJECT>-87
 
 ---
 
-## Scraper: scrape_lorcana.py
+## Scraper: scripts/scrape_lorcana.py
 A simple Python scraper is included to fetch a Lorcana Player card list page and output a TSV compatible with the fabled format.
 
 Dependencies: requests, beautifulsoup4
@@ -241,7 +241,7 @@ Install with:
 
 Usage:
 
-  python3 scrape_lorcana.py "https://lorcanaplayer.com/wilds-unknown-card-list-lorcana-set-12/" output.tsv
+  python3 scripts/scrape_lorcana.py "https://lorcanaplayer.com/wilds-unknown-card-list-lorcana-set-12/" output.tsv
 
 The script writes rows: number, FALSE, FALSE, name, rarity
 
