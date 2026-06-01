@@ -186,7 +186,10 @@ if lane in claims:
 Write claim on success: `{lane: {key, pid, claimed_at}}`.
 
 **Step 2 — Preflight (run in parallel):**
-- Query Linear for this lane's active ticket
+- Query Linear for this lane's active ticket. **Before accepting any dispatched ticket, read `claimed_keys` from `/tmp/rounds-claims.json` and skip any ticket whose key is already claimed in another lane** — pull the next highest-priority ticket instead and note the skip:
+  ```
+  ⚠ Skipped {KEY} — already active in Lane {N}. Pulling next ticket.
+  ```
 - Velocity snapshot (done this week, waiting count)
 - Timer status: `python3 scripts/tl.py status`
 - Waiting tickets due within 2 days

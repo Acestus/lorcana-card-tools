@@ -47,7 +47,16 @@ Also check if any lanes have `flow:waiting` issues that freed up (waiting doesn'
 
 ### Step 3 — Score and rank
 
-For each queue issue:
+Read already-claimed ticket keys from the claims file:
+```python
+import json, os
+claims = json.loads(open('/tmp/rounds-claims.json').read()) if os.path.exists('/tmp/rounds-claims.json') else {}
+claimed_keys = {v['key'] for v in claims.values() if isinstance(v, dict) and 'key' in v}
+```
+
+**Exclude any queue issue whose key is already in `claimed_keys`.** A ticket already active in any lane must never be dispatched into a second lane.
+
+For each remaining queue issue:
 1. Read Linear's native `priority` field (1=Urgent, 2=High, 3=Medium, 4=Low, 0=No Priority)
 2. Check `dueDate` — override to front of queue if within 2 days; among due-soon issues sort by `dueDate` ascending, then `priority` ascending, then `createdAt` ascending
 3. Sort remaining issues: Urgent → High → Medium → Low → No Priority, tiebreak by `createdAt` ascending (oldest first)
