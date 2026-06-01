@@ -207,9 +207,9 @@ Write claim on success: `{lane: {key, pid, claimed_at}}`.
 
 Invoke `knowledge-clerk` for the claimed ticket before presenting the card. Do not form an opinion about the approach until clerk has spoken.
 
-**Step 3b — Auto-start investigation:**
+**Step 3b — Auto-start investigation (mandatory):**
 
-Immediately after the clerk runs, start `ticket-investigator` for the claimed ticket without waiting for the operator to prompt. Treat the investigator as the default next step after dispatch unless the ticket is clearly context-only. Surface the investigator's findings as the ticket opens.
+Immediately after the clerk runs, invoke the `ticket-investigator` skill for the claimed ticket. Do NOT ask the operator whether to start it. Do NOT wait for a prompt. This is unconditional — invoke it every time a ticket is dispatched, regardless of perceived simplicity or ticket type. Surface the investigator's findings inline as the ticket card opens. The only exception is `constraint:technician` tickets where the ticket is already at 95%+ confidence — in that case proceed directly to Phase 2.5 using the existing issue file context.
 
 **Step 4 — Present the lane board:**
 
