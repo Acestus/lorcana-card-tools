@@ -78,6 +78,33 @@ def auth_header():
 # Jira helpers
 # ---------------------------------------------------------------------------
 
+def linear_fetch_active() -> list[dict]:
+    """Fetch In Progress Linear issues and return Jira-compatible dicts."""
+    script = Path(__file__).parent / "linear_search.py"
+    if not script.exists():
+        return []
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script), "--state", "In Progress", "--json"],
+            capture_output=True, text=True, cwd=PROJECTS
+        )
+        items = json.loads(result.stdout or "[]")
+    except Exception:
+        return []
+    out = []
+    for item in items:
+        labels = [n["name"] for n in item.get("labels", {}).get("nodes", [])]
+        out.append({
+            "key": item["identifier"],
+            "fields": {
+                "summary": item.get("title", ""),
+                "labels": labels,
+                "status": {"name": item.get("state", {}).get("name", "")},
+            },
+        })
+    return out
+
+
 def jira_search(jql: str, fields: list[str], auth: str, max_results: int = 50) -> list[dict]:
     payload = json.dumps({"jql": jql, "fields": fields, "maxResults": max_results}).encode()
     req = urllib.request.Request(
@@ -624,7 +651,7 @@ def git_commit_push(today: date) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
-def cmd_start(today: date, auth: str) -> None:
+def cmd_start(today: date) -> None:
     PLANNER.mkdir(exist_ok=True)
     org_file = PLANNER / f"{today.strftime('%m-%d')}.org"
 
@@ -645,12 +672,8 @@ def cmd_start(today: date, auth: str) -> None:
             if "drift" in line or "Fixed" in line or "✓" in line.strip()[:2]:
                 print(line)
 
-    print("  Fetching active tickets from Jira...")
-    active = jira_search(
-        'project = INFRA AND labels = "flow:active" AND assignee = currentUser() '
-        'AND status != Done ORDER BY priority ASC',
-        ["summary", "status", "labels"], auth,
-    )
+    print("  Fetching active tickets from Linear...")
+    active = linear_fetch_active()
 
     # Load SDP active cases from cases/ markdown (exclude Jira-linked to avoid dupes)
     sdp_active = scan_sdp_cases("flow:active", exclude_jira_linked=True)
@@ -658,7 +681,7 @@ def cmd_start(today: date, auth: str) -> None:
     content = build_daily_note(active, today, sdp_active=sdp_active)
     org_file.write_text(content)
     print(f"  ✓ Daily note created: {org_file}")
-    print(f"  ✓ {len(active)} Jira active ticket(s) loaded")
+    print(f"  ✓ {len(active)} Linear active ticket(s) loaded")
     for i in active:
         lane = classify_lane(i["fields"].get("labels", []))
         print(f"    {LANE_EMOJI[lane]} {i['key']} — {i['fields'].get('summary', '')[:60]}")
@@ -668,7 +691,7 @@ def cmd_start(today: date, auth: str) -> None:
             print(f"    🟠 SDP #{s['display_id']} — {s['subject'][:60]}")
 
 
-def cmd_refresh(today: date, auth: str) -> None:
+def cmd_refresh(today: date) -> None:
     """Re-query Jira and update the Kanban Board section in today's note."""
     org_file = PLANNER / f"{today.strftime('%m-%d')}.org"
 
@@ -680,13 +703,8 @@ def cmd_refresh(today: date, auth: str) -> None:
                   f"ls planner/*.org  # list existing notes"],
         )
 
-    print("  Refreshing board from Jira...")
-    active = jira_search(
-        'project = INFRA AND labels = "flow:active" '
-        'AND (assignee = currentUser() OR assignee IS EMPTY) '
-        'AND status != Done ORDER BY priority ASC',
-        ["summary", "status", "labels"], auth,
-    )
+    print("  Refreshing board from Linear...")
+    active = linear_fetch_active()
 
     sdp_active = scan_sdp_cases("flow:active", exclude_jira_linked=True)
     new_board = build_kanban_board(active, today, sdp_active=sdp_active)
@@ -696,7 +714,7 @@ def cmd_refresh(today: date, auth: str) -> None:
     org_text = active_pattern.sub("", org_text)
     updated = replace_kanban_section(org_text, new_board)
     org_file.write_text(updated)
-    print(f"  ✓ Kanban Board refreshed — {len(active)} Jira + {len(sdp_active)} SDP active ticket(s)")
+    print(f"  ✓ Kanban Board refreshed — {len(active)} Linear + {len(sdp_active)} SDP active ticket(s)")
     for i in active:
         lane = classify_lane(i["fields"].get("labels", []))
         print(f"    {LANE_EMOJI[lane]} {i['key']} — {i['fields'].get('summary', '')[:60]}")
@@ -766,13 +784,12 @@ def cmd_standup(today: date, auth: str, blockers: list[str]) -> None:
 
 def main():
     load_env_file()
-    auth = auth_header()
     today = date.today()
 
     parser = argparse.ArgumentParser(description="Daily note manager")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--start",   action="store_true", help="Create today's daily note")
-    group.add_argument("--refresh", action="store_true", help="Refresh Kanban Board section from Jira")
+    group.add_argument("--refresh", action="store_true", help="Refresh Kanban Board section from Linear")
     group.add_argument("--end",     action="store_true", help="Close the day — standup + push")
     group.add_argument("--standup", action="store_true", help="Print standup message only")
     parser.add_argument("--blocker", action="append", dest="blockers", metavar="TEXT",
@@ -783,12 +800,14 @@ def main():
     blockers = args.blockers or []
 
     if args.start:
-        cmd_start(today, auth)
+        cmd_start(today)
     elif args.refresh:
-        cmd_refresh(today, auth)
+        cmd_refresh(today)
     elif args.end:
+        auth = auth_header()
         cmd_end(today, auth, blockers, args.no_push)
     elif args.standup:
+        auth = auth_header()
         cmd_standup(today, auth, blockers)
 
 
