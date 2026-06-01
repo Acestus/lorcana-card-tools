@@ -1,6 +1,6 @@
 ---
 name: linear-dispatcher
-description: 'Dispatch the next highest-priority Linear issue into an open lane using the Eisenhower matrix. Use when the user says "dispatch", "next ticket", "what should I work on", or a lane is empty and needs filling.'
+description: 'Dispatch the next highest-priority Linear issue into an open lane using Linear native priority. Use when the user says "dispatch", "next ticket", "what should I work on", or a lane is empty and needs filling.'
 argument-hint: 'Say "dispatch" or "next ticket" to pull the highest-priority item from the queue'
 ---
 
@@ -8,18 +8,23 @@ argument-hint: 'Say "dispatch" or "next ticket" to pull the highest-priority ite
 
 Pull the next highest-priority `flow:queue` issue and assign it to an open lane.
 
-## Eisenhower Priority Model
+## Priority Model
 
-All issues are tagged `urgency:N` and `importance:N` (1=highest, 5=lowest).
+Dispatch order is driven by **Linear's native priority field**, not Eisenhower scoring.
 
-| Quadrant | Urgency | Importance | Action |
-|----------|---------|------------|--------|
-| Q1 — Do Now | ≤2 | ≤2 | Dispatch immediately |
-| Q2 — Schedule | ≥3 | ≤2 | Schedule next available |
-| Q3 — Delegate | ≤2 | ≥3 | Low-effort; pull when Q1/Q2 empty |
-| Q4 — Drop | ≥3 | ≥3 | Only if nothing else exists |
+| Priority | Linear Value | Dispatch Order |
+|----------|-------------|----------------|
+| Urgent | 1 | 1st |
+| High | 2 | 2nd |
+| Medium | 3 | 3rd |
+| Low | 4 | 4th |
+| No Priority | 0 | Last |
 
-Within quadrant: sort by `urgency + importance` (lower sum = higher priority). Tiebreak by oldest `createdAt`. Due within 2 days overrides quadrant and jumps to front.
+Tiebreak within the same priority tier: oldest `createdAt` first.
+
+**Due-date override:** Any issue due within 2 days is promoted to the front of the queue. Among multiple due-soon issues, sort by `dueDate` ascending, then `priority` ascending, then `createdAt` ascending.
+
+Note: Eisenhower `urgency:N` / `importance:N` labels may remain on tickets for personal scoring reference but are **not used for dispatch ordering**.
 
 ## Dispatch Workflow
 
@@ -43,10 +48,9 @@ Also check if any lanes have `flow:waiting` issues that freed up (waiting doesn'
 ### Step 3 — Score and rank
 
 For each queue issue:
-1. Read `urgency:N` and `importance:N` labels
-2. Compute quadrant (Q1–Q4)
-3. Check due date — override if within 2 days
-4. Sort: Q1 → Q2 → Q3 → Q4, then by score sum ascending
+1. Read Linear's native `priority` field (1=Urgent, 2=High, 3=Medium, 4=Low, 0=No Priority)
+2. Check `dueDate` — override to front of queue if within 2 days; among due-soon issues sort by `dueDate` ascending, then `priority` ascending, then `createdAt` ascending
+3. Sort remaining issues: Urgent → High → Medium → Low → No Priority, tiebreak by `createdAt` ascending (oldest first)
 
 Present top 3 as options; default dispatch is the top item.
 
@@ -75,7 +79,7 @@ python3 scripts/linear_create_stub.py --key {KEY}
 ✓ Dispatched {KEY} → Lane {N}
 
 {KEY} — {title}
-Quadrant: Q{N} | urgency:{U} importance:{I} | due: {due}
+Priority: {Urgent|High|Medium|Low|No Priority} | due: {due}
 State: In Progress
 ```
 

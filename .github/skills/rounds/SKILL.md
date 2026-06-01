@@ -39,7 +39,7 @@ Each Copilot tab runs its own rounds instance and claims exactly one lane. Five 
 
 ### Lane Variants
 
-Lanes are numbered **1–5** — use the number. The dispatcher pulls the highest Eisenhower-priority `flow:queue` ticket from the shared Linear queue.
+Lanes are numbered **1–5** — use the number. The dispatcher pulls the highest-priority (by Linear native priority) `flow:queue` ticket from the shared Linear queue.
 
 | Invocation | Lane | Emoji |
 |---|---|---|
@@ -49,16 +49,17 @@ Lanes are numbered **1–5** — use the number. The dispatcher pulls the highes
 | `start rounds 4` | Lane 4 | 🟠 |
 | `start rounds 5` | Lane 5 | 🔴 |
 
-**Dispatch order** — tickets are pulled by Eisenhower quadrant (highest priority first):
+**Dispatch order** — tickets are pulled by Linear native priority (highest first):
 
-| Priority | Quadrant | urgency | importance |
-|----------|----------|---------|------------|
-| 1st | Q1 — Do First | ≤ 2 | ≤ 2 |
-| 2nd | Q2 — Schedule | ≥ 3 | ≤ 2 |
-| 3rd | Q3 — Delegate | ≤ 2 | ≥ 3 |
-| 4th | Q4 — Someday | ≥ 3 | ≥ 3 |
+| Priority | Linear Value |
+|----------|-------------|
+| 1st | Urgent (1) |
+| 2nd | High (2) |
+| 3rd | Medium (3) |
+| 4th | Low (4) |
+| 5th | No Priority (0) |
 
-Within each quadrant, sort by `urgency + importance` sum (lower = higher priority). Tiebreak: oldest ticket first.
+Tiebreak: due-date override if within 2 days (sort by `dueDate` ascending), then `createdAt` ascending (oldest first).
 
 **WIP limit: 5** — one ticket per lane. `flow:waiting` does not count against WIP.
 
@@ -189,7 +190,7 @@ Write claim on success: `{lane: {key, pid, claimed_at}}`.
 - Velocity snapshot (done this week, waiting count)
 - Timer status: `python3 scripts/tl.py status`
 - Waiting tickets due within 2 days
-- Queue alerts for this lane (urgency:1/2 in queue)
+- Queue alerts for this lane (Urgent/High priority in queue)
 - **way:learning gate:** if ticket has `way:learning` label, check description for a timebox declaration (keywords: `timebox:`, `time-box`, `1-week`, `X-day spike`, `spike:`). If none found, pause before proceeding:
   ```
   ⚠  way:learning ticket with no timebox declared.
@@ -765,7 +766,7 @@ When the operator says "end rounds" or "close lane":
 | `confidence` | Show current interview score and what dimensions are missing |
 | `interview done` | Operator declares 95% — ask for approach summary, log it, proceed |
 | `swap {KEY}` | Replace current ticket with specific key from queue (same lane) |
-| `escalate` | Bump to urgency:1 (stakeholder override) |
+| `escalate` | Set Linear priority to Urgent (1) (stakeholder override) |
 | `breakdown` | Offer to split current ticket into Linear sub-issues |
 | `rubberduck` | Switch to question-asking mode (pressure-test reasoning) |
 | `doc it` | Invoke notion-writer to document current ticket's pattern |

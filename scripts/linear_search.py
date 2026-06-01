@@ -32,6 +32,7 @@ query SearchIssues($filter: IssueFilter!, $first: Int!) {
       assignee { name }
       labels { nodes { name } }
       dueDate
+      createdAt
       updatedAt
       team { key name }
     }
