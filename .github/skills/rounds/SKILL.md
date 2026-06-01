@@ -214,6 +214,14 @@ Invoke `knowledge-clerk` for the claimed ticket before presenting the card. Do n
 
 Immediately after the clerk runs, invoke the `ticket-investigator` skill for the claimed ticket. Do NOT ask the operator whether to start it. Do NOT wait for a prompt. This is unconditional — invoke it every time a ticket is dispatched, regardless of perceived simplicity or ticket type. Surface the investigator's findings inline as the ticket card opens. The only exception is `constraint:technician` tickets where the ticket is already at 95%+ confidence — in that case proceed directly to Phase 2.5 using the existing issue file context.
 
+**Step 3c — Refresh the daily note:**
+
+After the ticket is claimed and before presenting the card, refresh the daily note to reflect the new dispatch:
+```bash
+python3 scripts/daily_note.py --refresh
+```
+If the daily note does not exist yet (user hasn't run `start-my-day`), skip silently — do not create it here.
+
 **Step 4 — Present the lane board:**
 
 ```
@@ -684,6 +692,12 @@ python3 scripts/rounds_transition.py --key {KEY} --action park
 ```
 
 Add `--no-push` for dry-run. The script prints a one-line confirmation per ticket touched.
+
+**After every done/waiting/blocked transition, refresh the daily note:**
+```bash
+python3 scripts/daily_note.py --refresh
+```
+This keeps the kanban board in the daily note accurate after every state change. Run it immediately after `rounds_transition.py` completes — do not wait for the operator to ask.
 
 #### "skip" / "next" — Move on without changing status
 Leave timer running and present next lane's ticket with file path.

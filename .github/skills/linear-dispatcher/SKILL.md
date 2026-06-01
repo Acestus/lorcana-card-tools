@@ -74,6 +74,12 @@ Update the claim file:
 echo '{"lane1": "{KEY}", ...}' > /tmp/rounds-claims.json
 ```
 
+**Refresh the daily note immediately after activating:**
+```bash
+python3 scripts/daily_note.py --refresh
+```
+Skip silently if no daily note exists yet.
+
 ### Step 5 — Create local stub if missing
 
 ```bash
