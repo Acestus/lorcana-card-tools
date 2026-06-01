@@ -4,7 +4,15 @@ Trigger: "scrape lorcana"
 
 Description: Run the Lorcana Player list scraper and write CSV/TSV to assets/lorcana. This skill is a thin caller that runs the script in scripts/ and commits the result.
 
-Run:
+GitHub Actions (preferred):
+
+  Trigger manually via the `scrape-lorcana` workflow in `.github/workflows/scrape-lorcana.yaml`.
+  Go to Actions → "Scrape Lorcana Player" → Run workflow, then paste the LorcanaPlayer URL.
+
+  The workflow runs on `workflow_dispatch` only (no schedule), takes `lorcanaplayer_url` as input,
+  scrapes the card list, and commits the CSV/TSV to `assets/lorcana/`.
+
+Run locally:
 
   # Example: scrape Wilds Unknown (set 12)
   python3 scripts/scrape_lorcana_site.py "https://lorcanaplayer.com/wilds-unknown-card-list-lorcana-set-12/" assets/lorcana
